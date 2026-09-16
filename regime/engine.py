@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Any
 
 import numpy as np
@@ -8,7 +9,6 @@ import pandas as pd
 from sklearn.metrics import adjusted_rand_score
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
-
 
 FEATURE_COLUMNS = ["return_mean", "volatility", "momentum", "drawdown", "downside_vol"]
 
@@ -21,7 +21,7 @@ def regime_features(prices: pd.Series, window: int = 20) -> pd.DataFrame:
     out["volatility"] = returns.rolling(window).std()
     out["momentum"] = prices.pct_change(window)
     out["drawdown"] = prices / prices.rolling(window * 3, min_periods=window).max() - 1
-    out["downside_vol"] = returns.where(returns < 0).rolling(window).std()
+    out["downside_vol"] = returns.clip(upper=0).rolling(window).std()
     return out.dropna()
 
 
@@ -29,7 +29,7 @@ def transition_matrix(labels: pd.Series) -> pd.DataFrame:
     states = sorted(labels.dropna().unique())
     matrix = pd.DataFrame(0.0, index=states, columns=states)
     values = labels.dropna().tolist()
-    for current, nxt in zip(values[:-1], values[1:]):
+    for current, nxt in pairwise(values):
         matrix.loc[current, nxt] += 1.0
     row_sum = matrix.sum(axis=1).replace(0, 1.0)
     return matrix.div(row_sum, axis=0)
