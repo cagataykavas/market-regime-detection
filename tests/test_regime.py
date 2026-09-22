@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
-from app.api import app
 from fastapi.testclient import TestClient
+
+from app.api import app
 from regime.engine import RegimeExperiment
 from regime.synthetic import synthetic_regime_market
 
