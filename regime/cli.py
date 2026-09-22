@@ -18,6 +18,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--regimes", type=int, default=3)
     parser.add_argument("--cycles", type=int, default=2)
     parser.add_argument("--output", type=Path, default=Path("artifacts"))
+    parser.add_argument(
+        "--require-stable",
+        action="store_true",
+        help="exit 2 when the default temporal-stability policy is violated",
+    )
     args = parser.parse_args(argv)
 
     known = None
@@ -35,9 +40,11 @@ def main(argv: list[str] | None = None) -> int:
         "rows": result["rows"],
         "regimes": list(result["regime_stats"]),
         "evaluation": result["evaluation"],
+        "stability": result["stability"]["summary"],
+        "stability_passed": result["stability"]["passed"],
         "output": str(args.output),
     }, indent=2))
-    return 0
+    return 0 if not args.require_stable or result["stability"]["passed"] else 2
 
 
 if __name__ == "__main__":
