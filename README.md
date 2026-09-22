@@ -2,7 +2,7 @@
 
 A runnable unsupervised market-state project using **Gaussian Mixture Models (GMMs)** over rolling return, volatility, momentum, drawdown and downside-volatility features.
 
-The repository adds the engineering pieces around the clustering itself: deterministic synthetic ground truth, confidence scores, transition matrices, regime-duration analysis, API/CLI entrypoints, reports, Docker and CI.
+The repository adds the engineering pieces around the clustering itself: deterministic synthetic ground truth, confidence scores, transition matrices, regime-duration analysis, temporal-stability release gates, API/CLI entrypoints, reports, Docker and CI.
 
 ## Architecture
 
@@ -15,6 +15,7 @@ flowchart LR
     C --> N[Semantic naming by volatility]
     N --> T[Transition matrix]
     N --> D[Contiguous duration analysis]
+    N --> STAB[Churn and whipsaw stability gate]
     N --> R[Regime statistics]
     R --> REP[JSON + HTML report]
     T --> REP
@@ -60,6 +61,27 @@ stress -> transition
 It also measures average contiguous duration by named regime.
 
 Important distinction: **this is still a GMM, not an HMM**. Temporal transition probabilities are measured after clustering; they are not part of the likelihood optimized by the mixture model.
+
+## Temporal-stability gate
+
+A regime model can have plausible aggregate statistics while flickering between states too quickly to support a production decision. Every analysis therefore includes a fail-closed stability audit over the unsmoothed predictions:
+
+- switch rate across consecutive observations;
+- fraction of observations belonging to runs shorter than the policy minimum;
+- immediate A→B→A reversal rate (default ceiling: `0.50` of eligible run triplets);
+- aggregate confidence and dominant-regime share;
+- run-level start/end positions, length and mean confidence;
+- deterministic reason codes for every policy violation.
+
+CI requires the synthetic reference experiment to pass the default policy:
+
+```bash
+python -m regime.cli --cycles 1 --seed 42 --require-stable
+```
+
+`--require-stable` exits `2` when the policy is rejected. Python callers can pass a `RegimeStabilityPolicy` to `RegimeExperiment.analyze` to set evidence minimums and thresholds appropriate to their decision cadence.
+
+The audit does not smooth labels or improve model quality; it exposes unusable churn rather than hiding it. Confidence is the GMM posterior under its fitted assumptions and is not calibrated correctness probability. Thresholds must be selected on a historical validation period, then held fixed on forward data. A live trading control should additionally include costs, execution delay and point-in-time data checks.
 
 ## Quick start
 
@@ -112,7 +134,7 @@ ruff check .
 pytest -q
 ```
 
-CI runs synthetic regime validation, probability-transition checks, a CLI experiment and container build.
+CI runs synthetic regime validation, probability-transition checks, the temporal-stability gate, a CLI experiment and container build.
 
 ## Model limitations
 
@@ -120,4 +142,4 @@ GMMs assume observations come from a finite mixture of parametric distributions 
 
 ## Portfolio signal
 
-**Python · Pandas · scikit-learn · Gaussian Mixture Models · unsupervised learning · market regimes · transition analysis · ARI · FastAPI · Docker · CI/CD**
+**Python · Pandas · scikit-learn · Gaussian Mixture Models · unsupervised learning · market regimes · transition analysis · temporal stability · ARI · FastAPI · Docker · CI/CD**

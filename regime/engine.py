@@ -10,6 +10,12 @@ from sklearn.metrics import adjusted_rand_score
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 
+from .stability import (
+    RegimeObservation,
+    RegimeStabilityPolicy,
+    audit_regime_stability,
+)
+
 FEATURE_COLUMNS = ["return_mean", "volatility", "momentum", "drawdown", "downside_vol"]
 
 
@@ -89,7 +95,12 @@ class RegimeExperiment:
                 names[int(item)] = "transition"
         return RegimeModel(scaler, model, names)
 
-    def analyze(self, prices: pd.Series, known_labels: pd.Series | None = None) -> dict[str, Any]:
+    def analyze(
+        self,
+        prices: pd.Series,
+        known_labels: pd.Series | None = None,
+        stability_policy: RegimeStabilityPolicy | None = None,
+    ) -> dict[str, Any]:
         features = regime_features(prices)
         model = self.fit(features)
         classified = model.predict(features)
@@ -116,6 +127,17 @@ class RegimeExperiment:
         if current is not None:
             durations.setdefault(str(current), []).append(run)
         average_duration = {key: float(np.mean(value)) for key, value in durations.items()}
+        stability = audit_regime_stability(
+            (
+                RegimeObservation(
+                    position=position,
+                    regime=str(row["regime"]),
+                    confidence=float(row["confidence"]),
+                )
+                for position, (_, row) in enumerate(classified.iterrows())
+            ),
+            stability_policy,
+        )
 
         evaluation = None
         if known_labels is not None:
@@ -129,6 +151,7 @@ class RegimeExperiment:
             "regime_stats": {name: {key: float(value) for key, value in row.items()} for name, row in stats.iterrows()},
             "transition_matrix": {str(row): {str(col): float(transitions.loc[row, col]) for col in transitions.columns} for row in transitions.index},
             "average_regime_duration_days": average_duration,
+            "stability": stability.to_dict(),
             "evaluation": evaluation,
             "timeline": [
                 {

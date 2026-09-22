@@ -3,7 +3,6 @@ from __future__ import annotations
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-
 from regime.engine import RegimeExperiment
 from regime.synthetic import synthetic_regime_market
 

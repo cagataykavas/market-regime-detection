@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import numpy as np
-from fastapi.testclient import TestClient
-
 from app.api import app
+from fastapi.testclient import TestClient
 from regime.engine import RegimeExperiment
 from regime.synthetic import synthetic_regime_market
 
@@ -15,6 +14,8 @@ def test_regime_experiment_recovers_nontrivial_structure():
     assert result["evaluation"] is not None
     assert result["evaluation"]["adjusted_rand_index"] > 0.05
     assert set(result["average_regime_duration_days"]) == set(result["regime_stats"])
+    assert result["stability"]["summary"]["observations"] == result["feature_rows"]
+    assert result["stability"]["passed"] is True
 
 
 def test_transition_rows_are_probabilities():
