@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "governed_states": [
+    "calm",
+    "transition",
+    "stress"
+  ],
+  "reference": {
+    "counts": {
+      "calm": 500,
+      "transition": 300,
+      "stress": 200
+    },
+    "effective_sample_size": 350
+  },
+  "current": {
+    "counts": {
+      "calm": 95,
+      "transition": 64,
+      "stress": 41
+    },
+    "effective_sample_size": 70
+  }
+}
